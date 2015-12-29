@@ -1,4 +1,5 @@
 require 'jumpstart_auth'
+require 'bitly'
 
 class MicroBlogger
 	attr_reader :client
@@ -22,6 +23,8 @@ class MicroBlogger
 			when 't' then tweet(parts[1..-1].join(' '))
 			when 'dm' then dm(parts[1], parts[2..-1].join(' '))
 			when 'spam' then spam_my_followers(parts[1..-1].join(' '))
+			when 'elt' then everyones_last_tweet
+			when 'turl' then tweet(parts[1..-2].join(' ') + " " + shorten(parts[-1]))
 			else
 				puts "Sorry, I don't know how to #{command}"
 			end
@@ -60,6 +63,24 @@ class MicroBlogger
 		screen_names = []
 		@client.followers.each { |follower| screen_names << @client.user(follower).screen_name }
 		screen_names
+	end
+
+	def everyones_last_tweet
+		friends = @client.friends.collect { |friend| @client.user(friend) }
+		friends_sorted = friends.sort_by { |friend| friend.screen_name.downcase }
+		friends_sorted.each do |friend|
+			time_created = friend.status.created_at
+			puts "On #{time_created.strftime("%A, %b %d %Y")}, #{friend.screen_name} said..."
+			puts friend.status.text
+			puts ''
+		end
+	end
+
+	def shorten(original_url)
+		Bitly.use_api_version_3
+		bitly = Bitly.new('hungryacademy', 'R_430e9f62250186d2612cca76eee2dbc6')
+		puts "Shortening this URL: #{original_url}"
+		bitly.shorten(original_url).short_url
 	end
 end
 
